@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>生コン打設管理ツール</title>
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="生コン打設">
+<meta name="theme-color" content="#1C5A99">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{ --line:#cfd6dd; --accent:#1c5a99; --red:#f4c7ce; --redtx:#9c0006;
+         --yellow:#ffeb9c; --yeltx:#7a5b00; --ok:#137333; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{font-family:"Yu Gothic","ＭＳ Ｐゴシック","Hiragino Kaku Gothic ProN",sans-serif;
+       margin:0; background:#eef1f4; color:#1f2a37; font-size:15px;}
+  .app{max-width:540px; margin:0 auto; padding:8px;}
+  header{display:flex; align-items:baseline; justify-content:space-between; padding:4px 4px 6px;}
+  header h1{margin:0; font-size:16px; color:var(--accent);}
+  header .sub{font-size:11px; color:#7a8794;}
+  .tabs{display:flex; gap:4px;}
+  .tab{flex:1; text-align:center; padding:10px 6px; border-radius:9px 9px 0 0; background:#dde5ee; color:#3b4654; font-weight:700; cursor:pointer; border:1px solid var(--line); border-bottom:none; font-size:14px;}
+  .tab.active{background:#fff; color:var(--accent);}
+  .tabsec{display:none;} .tabsec.active{display:block;}
+  .card{background:#fff; border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px;}
+  details.card>summary{font-weight:700; color:var(--accent); cursor:pointer; font-size:14px; list-style:none;}
+  details.card>summary::-webkit-details-marker{display:none;}
+  details.card>summary::before{content:"▸ ";} details.card[open]>summary::before{content:"▾ ";}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;}
+  .fld{display:flex; flex-direction:column; gap:2px;}
+  .fld.full{grid-column:1 / -1;}
+  .fld label{font-size:11px; color:#52606d; font-weight:600;}
+  input,select{padding:9px; border:1px solid var(--line); border-radius:7px; font-size:15px; font-family:inherit; width:100%;}
+  input:focus{outline:2px solid var(--accent); border-color:var(--accent);}
+
+  .datewrap{position:relative;}
+  .datewrap .disp{width:100%; cursor:pointer; background:#f5f9fe; border:1.5px solid var(--accent); font-weight:700; color:#1f2a37; padding-right:34px;}
+  .datewrap .disp::placeholder{color:#5b7fa6; font-weight:600;}
+  .datewrap .ovl{position:absolute; inset:0; width:100%; height:100%; opacity:0; border:0; padding:0; margin:0; cursor:pointer; z-index:2;}
+  .datewrap .calicon{position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:17px; pointer-events:none; z-index:1;}
+
+  .panelhead{display:flex; align-items:center; justify-content:space-between; gap:6px; margin-bottom:8px;}
+  .panelhead .title{font-size:20px; font-weight:800; color:var(--accent);}
+  .panelhead .count{font-size:12px; color:#7a8794;}
+  .nav{display:flex; gap:6px;}
+  .navbtn{border:1px solid var(--accent); background:#eaf2fb; color:var(--accent); border-radius:8px; padding:8px 12px; font-size:15px; font-weight:700; cursor:pointer;}
+  .navbtn:active{background:var(--accent); color:#fff;}
+  .navbtn.danger{border-color:#d9b3b0; color:#b42318; background:#fff;}
+  .navbtn.add{background:var(--accent); color:#fff;}
+
+  .timegrid{display:grid; grid-template-columns:auto 1fr auto; gap:6px 8px; align-items:center;}
+  .timegrid label{font-size:13px; font-weight:600; color:#3b4654; white-space:nowrap;}
+  .timegrid input{font-size:16px; padding:8px;}
+  .nowbtn{border:1px solid var(--accent); background:#eaf2fb; color:var(--accent); border-radius:7px; padding:8px 10px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;}
+  .nowbtn:active{background:var(--accent); color:#fff;}
+
+  .calcbar{display:flex; align-items:center; gap:10px; margin:10px 0; padding:8px 10px; background:#f5f8fb; border:1px solid var(--line); border-radius:8px; flex-wrap:wrap;}
+  .calcbar .k{font-size:12px; color:#52606d;}
+  .calcbar .bigval{font-size:20px; font-weight:800;}
+  .calcbar .bigval.warn-red{color:var(--redtx);} .calcbar .bigval.warn-yellow{color:var(--yeltx);}
+  .badge{font-size:12px; font-weight:800; padding:3px 9px; border-radius:20px;}
+  .badge.bok{background:#e6f4ea; color:var(--ok);} .badge.byel{background:var(--yellow); color:var(--yeltx);} .badge.bred{background:var(--red); color:var(--redtx);}
+  .limit{font-size:11px; color:#7a8794; margin-left:auto;}
+
+  .stepper{display:grid; grid-template-columns:auto 1fr auto auto auto; gap:6px; align-items:center; margin-top:8px;}
+  .stepper label{font-size:13px; font-weight:600; color:#3b4654; white-space:nowrap;}
+  .stepper .unit{font-size:12px; color:#7a8794;}
+  .stepper input{text-align:center; font-size:16px; padding:8px;}
+  .sbtn{width:42px; height:40px; border:1px solid var(--accent); background:#eaf2fb; color:var(--accent); border-radius:8px; font-size:20px; font-weight:800; cursor:pointer; line-height:1;}
+  .sbtn:active{background:var(--accent); color:#fff;}
+
+  .sumbar{display:flex; gap:6px; text-align:center;}
+  .stat{flex:1; background:#fff; border:1px solid var(--line); border-radius:9px; padding:7px 4px;}
+  .stat .k{font-size:10px; color:#52606d;} .stat .v{font-size:18px; font-weight:800; color:var(--accent);}
+  .substat{display:flex; gap:10px; flex-wrap:wrap; font-size:11px; color:#52606d; margin-top:6px; justify-content:center;}
+
+  .toolbar{display:flex; gap:6px; margin:8px 0; flex-wrap:wrap;}
+  .btn{flex:1; min-width:96px; padding:11px 6px; border:none; border-radius:9px; font-size:14px; font-weight:700; cursor:pointer;}
+  .btn-xls{background:#137333; color:#fff;} .btn-pdf{background:#b3261e; color:#fff;} .btn-csv{background:#5f6c7b; color:#fff;}
+  .btn-clear{background:#fff; color:#b42318; border:1px solid #f0c2bd; flex:0 0 auto; padding:11px 12px; min-width:0;}
+  .infield{display:flex; gap:5px; align-items:center;}
+  .infield input{flex:1;}
+  .micbtn{flex:none; width:44px; height:40px; border:1px solid var(--accent); background:#eaf2fb; color:var(--accent); border-radius:7px; font-size:17px; cursor:pointer; line-height:1;}
+  .micbtn.rec{background:#b3261e; color:#fff; border-color:#b3261e; animation:pulse 1s infinite;}
+  @keyframes pulse{50%{opacity:.5;}}
+  .minibtn{border:1px solid var(--accent); background:#eaf2fb; color:var(--accent); border-radius:6px; padding:5px 9px; font-size:12px; font-weight:700; cursor:pointer;}
+  .minibtn.del{border-color:#e0b4b0; color:#b42318; background:#fff;}
+  table.ftbl{border-collapse:collapse; width:100%; font-size:13px;}
+  table.ftbl th,table.ftbl td{border:1px solid var(--line); padding:6px 4px; text-align:center;}
+  table.ftbl th{background:#dbe7f3; font-size:11px;}
+
+  table.list{border-collapse:collapse; width:100%; font-size:13px;}
+  table.list th{background:#dbe7f3; padding:5px 3px; border:1px solid var(--line); font-size:11px;}
+  table.list td{padding:6px 3px; border:1px solid var(--line); text-align:center;}
+  table.list tr{cursor:pointer;}
+  table.list tr.curRow{background:#fff7e0; outline:2px solid var(--accent);}
+  table.list .warn-red{color:var(--redtx); font-weight:800;} table.list .warn-yellow{color:var(--yeltx); font-weight:700;}
+
+  .qtitle{font-weight:800; color:var(--accent); font-size:14px; margin:2px 0 8px; border-bottom:2px solid #dbe7f3; padding-bottom:5px;}
+  table.qtbl{border-collapse:collapse; width:100%; font-size:13px; margin-top:4px;}
+  table.qtbl th,table.qtbl td{border:1px solid var(--line); padding:6px 5px; text-align:center;}
+  table.qtbl th{background:#dbe7f3; font-size:12px;}
+  table.qtbl input{padding:6px; font-size:14px; text-align:center;}
+  .pdate{font-weight:700; color:var(--accent); font-size:13px;}
+  .jud{font-weight:800; font-size:13px;} .jud.ok{color:var(--ok);} .jud.ng{color:var(--redtx);} .jud.na{color:#9aa6b2;}
+
+  .legend{font-size:12px; line-height:1.7; color:#3b4654;}
+  .legend .sw{display:inline-block; width:13px; height:13px; border-radius:3px; vertical-align:-2px; margin-right:4px; border:1px solid #bbb;}
+  .msg{font-size:13px; padding:8px 10px; border-radius:7px; margin:6px 0; display:none;}
+  .msg.ok{background:#e6f4ea; color:#137333; display:block;} .msg.err{background:#fce8e6; color:#b42318; display:block;}
+  .hint{font-size:11px; color:#7a8794; margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <header><h1>生コン打設管理</h1><span class="sub">電子野帳モード</span></header>
+
+  <div class="tabs">
+    <div class="tab active" id="tabbtn-dasetsu" onclick="showTab('dasetsu')">打設記録</div>
+    <div class="tab" id="tabbtn-quality" onclick="showTab('quality')">品質管理試験</div>
+    <div class="tab" id="tabbtn-files" onclick="showTab('files')">現場ファイル</div>
+  </div>
+
+  <!-- ============ 打設記録タブ ============ -->
+  <section class="tabsec active" id="tab-dasetsu">
+    <details class="card" id="infoBox" open>
+      <summary>工事情報・基準設定</summary>
+      <div class="grid2">
+        <div class="fld"><label>工事番号</label><input id="h_no"></div>
+        <div class="fld"><label>打設日（タップで選択）</label><div class="datewrap"><input id="h_date_disp" class="disp" type="text" readonly placeholder="タップして日付を選択"><span class="calicon">📅</span><input id="h_date" class="ovl" type="date"></div></div>
+        <div class="fld full"><label>工事名</label><input id="h_name" value="R6圏央道高須賀地区改良その6工事"></div>
+        <div class="fld"><label>構造物名</label><div class="infield"><input id="h_struct"><button type="button" class="micbtn" data-mic="h_struct" onclick="startVoice('h_struct')">🎤</button></div></div>
+        <div class="fld"><label>打設箇所</label><div class="infield"><input id="h_place"><button type="button" class="micbtn" data-mic="h_place" onclick="startVoice('h_place')">🎤</button></div></div>
+        <div class="fld full"><label>生コン種類（呼び強度）</label><div class="infield"><input id="h_kind" placeholder="例: 24-8-20N"><button type="button" class="micbtn" data-mic="h_kind" onclick="startVoice('h_kind')">🎤</button></div></div>
+        <div class="fld"><label>計画打設量 (㎥)</label><input id="h_plan" type="number" step="0.1" inputmode="decimal"></div>
+        <div class="fld"><label>基準気温 (℃)</label><input id="h_basetemp" type="number" step="0.1" inputmode="decimal" placeholder="例: 20"></div>
+        <div class="fld"><label>基準ｺﾝｸﾘｰﾄ温度 (℃)</label><input id="h_basectemp" type="number" step="0.1" inputmode="decimal" placeholder="例: 28"></div>
+      </div>
+    </details>
+
+    <div class="card">
+      <div class="panelhead">
+        <div><span class="title" id="p_title">1号車</span> <span class="count" id="p_count">1 / 1台</span></div>
+        <div class="nav"><button class="navbtn" onclick="prevT()">◀</button><button class="navbtn" onclick="nextT()">▶</button></div>
+      </div>
+      <div class="timegrid">
+        <label>出発 (A)</label><input id="p_a" type="time" oninput="setField('a',this.value)"><button class="nowbtn" onclick="stampP('a')">今</button>
+        <label>到着 (B)</label><input id="p_b" type="time" oninput="setField('b',this.value)"><button class="nowbtn" onclick="stampP('b')">今</button>
+        <label>打設開始 (C)</label><input id="p_c" type="time" oninput="setField('c',this.value)"><button class="nowbtn" onclick="stampP('c')">今</button>
+        <label>打設終了 (D)</label><input id="p_d" type="time" oninput="setField('d',this.value)"><button class="nowbtn" onclick="stampP('d')">今</button>
+      </div>
+      <div class="calcbar">
+        <span class="k">運搬(B−A)</span><span class="bigval" id="p_ba">–</span>
+        <span class="k">D−A</span><span class="bigval" id="p_da">–</span>
+        <span class="badge" id="p_badge"></span><span class="limit" id="p_limit"></span>
+      </div>
+      <div class="stepper">
+        <label>打設量</label><input id="p_vol" type="number" step="0.1" inputmode="decimal" oninput="setField('vol',this.value)" onchange="normField('vol')">
+        <span class="unit">㎥</span><button class="sbtn" onclick="stepVal('vol',-VOLSTEP,4.0)">−</button><button class="sbtn" onclick="stepVal('vol',VOLSTEP,4.0)">＋</button>
+      </div>
+      <div class="stepper">
+        <label>ｺﾝｸﾘｰﾄ温度</label><input id="p_ct" type="number" step="0.1" inputmode="decimal" oninput="setField('ct',this.value)" onchange="normField('ct')">
+        <span class="unit">℃</span><button class="sbtn" onclick="stepVal('ct',-CTSTEP,baseCtemp())">−</button><button class="sbtn" onclick="stepVal('ct',CTSTEP,baseCtemp())">＋</button>
+      </div>
+      <div class="stepper">
+        <label>気温</label><input id="p_at" type="number" step="0.1" inputmode="decimal" oninput="setField('at',this.value)" onchange="normField('at')">
+        <span class="unit">℃</span><button class="sbtn" onclick="stepVal('at',-ATSTEP,baseTemp())">−</button><button class="sbtn" onclick="stepVal('at',ATSTEP,baseTemp())">＋</button>
+      </div>
+      <div class="stepper" style="grid-template-columns:auto 1fr;">
+        <label>備考</label><input id="p_note" type="text" oninput="setField('note',this.value)">
+      </div>
+      <div class="toolbar" style="margin-bottom:0;">
+        <button class="btn navbtn add" onclick="addT()">＋ 次の台を追加</button>
+        <button class="btn-clear navbtn danger" onclick="delT()">この台を削除</button>
+      </div>
+    </div>
+
+    <div class="sumbar">
+      <div class="stat"><div class="k">累計 (㎥)</div><div class="v" id="s_vol">0.0</div></div>
+      <div class="stat"><div class="k">残量 (㎥)</div><div class="v" id="s_rem">—</div></div>
+      <div class="stat"><div class="k">台数</div><div class="v" id="s_cnt">0</div></div>
+    </div>
+    <div class="substat">
+      <span>平均D−A <b id="s_avgg">—</b></span><span>最大D−A <b id="s_maxg">—</b></span>
+      <span>平均気温 <b id="s_at">—</b></span><span>平均ｺﾝ温 <b id="s_ct">—</b></span>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn btn-xls" onclick="exportExcel('dasetsu')">Excel出力（打設）</button>
+      <button class="btn btn-pdf" onclick="printDasetsu()">PDF出力（打設）</button>
+      <button class="btn btn-csv" onclick="exportCSV()">CSV</button>
+      <button class="btn-clear" onclick="clearAll()">全消去</button>
+    </div>
+    <div id="msg" class="msg"></div>
+
+    <div class="card">
+      <div style="font-weight:700; color:var(--accent); font-size:13px; margin-bottom:6px;">記録一覧（タップで編集）</div>
+      <table class="list"><thead><tr><th>台</th><th>到着</th><th>D−A</th><th>量㎥</th><th>ｺﾝ温</th><th>気温</th></tr></thead><tbody id="listrows"></tbody></table>
+      <div class="hint">時刻は「今」でワンタップ記録。打設量は4.0㎥基準、気温・ｺﾝｸﾘｰﾄ温度は基準値を初期に各台「−／＋」で0.5刻み調整（すべて小数第1位）。記録した台のみ集計・出力します。内容は端末に自動保存。</div>
+    </div>
+
+    <details class="card">
+      <summary>判定基準・注記</summary>
+      <div class="legend" style="margin-top:8px;">
+        <div><b>D−A（練りはじめ〜打設完了）の時間制限</b>（土木学会 示方書）</div>
+        <div>・気温 25℃以下 … <b>120分以内</b>／25℃超 … <b>90分以内</b></div>
+        <div><span class="sw" style="background:var(--red)"></span>赤=超過　<span class="sw" style="background:var(--yellow)"></span>黄=制限15分前（注意）</div>
+        <div>運搬(B−A)が90分超でも黄表示（参考）</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ 品質管理試験タブ ============ -->
+  <section class="tabsec" id="tab-quality">
+    <div class="card">
+      <div class="qtitle">配合・規格</div>
+      <div class="grid2">
+        <div class="fld"><label>生コン種類（呼び強度）</label><div class="infield"><input id="q_kind" placeholder="例: 24-8-20N" oninput="onKind()"><button type="button" class="micbtn" data-mic="q_kind" onclick="startVoice('q_kind')">🎤</button></div></div>
+        <div class="fld"><label>呼び強度 (N/mm²)</label><input id="q_fc" type="number" step="1" inputmode="decimal"></div>
+        <div class="fld"><label>打設日</label><input id="q_pourdate" type="text" readonly></div>
+        <div class="fld"><label>供試体採取日（タップで選択）</label><div class="datewrap"><input id="q_sample_disp" class="disp" type="text" readonly placeholder="タップして日付を選択"><span class="calicon">📅</span><input id="q_sample" class="ovl" type="date"></div></div>
+      </div>
+      <div class="hint">採取日が空のときは打設日を基準に予定日を計算します。呼び強度を入れるとスランプ規格・強度を自動補完します。</div>
+    </div>
+
+    <div class="card">
+      <div class="qtitle">圧縮強度試験（試験予定日は土日祝を除く）</div>
+      <table class="qtbl">
+        <thead><tr><th>材齢</th><th>試験予定日</th><th>実測 (N/mm²)</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>3 日</td><td class="pdate" id="q_d3">—</td><td><input id="q_s3" type="number" step="0.1" inputmode="decimal" oninput="qRender()" onchange="qNorm('q_s3')"></td><td class="jud na" id="q_j3">—</td></tr>
+          <tr><td>1 週（7日）</td><td class="pdate" id="q_d7">—</td><td><input id="q_s7" type="number" step="0.1" inputmode="decimal" oninput="qRender()" onchange="qNorm('q_s7')"></td><td class="jud na" id="q_j7">—</td></tr>
+          <tr><td>4 週（28日）</td><td class="pdate" id="q_d28">—</td><td><input id="q_s28" type="number" step="0.1" inputmode="decimal" oninput="qRender()" onchange="qNorm('q_s28')"></td><td class="jud na" id="q_j28">—</td></tr>
+        </tbody>
+      </table>
+      <div class="hint">予定日が土・日・祝に当たる場合は翌営業日に順延して表示します。合否判定は4週（材齢28日）で呼び強度以上かを判定します。3日・1週（7日）は推定（参考）で、合否判定は行いません。</div>
+    </div>
+
+    <div class="card">
+      <div class="qtitle">フレッシュ試験</div>
+      <table class="qtbl">
+        <thead><tr><th>試験</th><th>規格値</th><th>許容差</th><th>実測値</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr><td>スランプ (cm)</td><td><input id="q_slump_spec" type="number" step="0.1" inputmode="decimal" oninput="qRender()"></td><td>±<input id="q_slump_tol" type="number" step="0.1" inputmode="decimal" value="2.5" oninput="qRender()"></td><td><input id="q_slump_act" type="number" step="0.1" inputmode="decimal" oninput="qRender()" onchange="qNorm('q_slump_act')"></td><td class="jud na" id="q_slump_j">—</td></tr>
+          <tr><td>空気量 (%)</td><td><input id="q_air_spec" type="number" step="0.1" inputmode="decimal" value="4.5" oninput="qRender()"></td><td>±<input id="q_air_tol" type="number" step="0.1" inputmode="decimal" value="1.5" oninput="qRender()"></td><td><input id="q_air_act" type="number" step="0.1" inputmode="decimal" oninput="qRender()" onchange="qNorm('q_air_act')"></td><td class="jud na" id="q_air_j">—</td></tr>
+          <tr><td>単位水量 (kg/m³)</td><td colspan="2">上限 <input id="q_water_lim" type="number" step="1" inputmode="decimal" value="175" oninput="qRender()" style="width:70px; display:inline-block;"> 以下</td><td><input id="q_water_act" type="number" step="0.1" inputmode="decimal" oninput="qRender()" onchange="qNorm('q_water_act')"></td><td class="jud na" id="q_water_j">—</td></tr>
+        </tbody>
+      </table>
+      <div class="hint">許容差・上限はJIS等の一般値を初期表示（スランプ8〜18は±2.5cm、空気量±1.5%）。現場条件に合わせて変更できます。</div>
+    </div>
+
+    <div class="toolbar">
+      <button class="btn btn-xls" onclick="exportExcel('quality')">Excel出力（品質）</button>
+      <button class="btn btn-pdf" onclick="printQuality()">PDF出力（品質）</button>
+      <button class="btn-clear" onclick="qClear()">品質を消去</button>
+    </div>
+    <div id="qmsg" class="msg"></div>
+  </section>
+
+  <!-- ============ 現場ファイルタブ ============ -->
+  <section class="tabsec" id="tab-files">
+    <div class="card">
+      <div class="qtitle">現在のファイル</div>
+      <div class="fld"><label>ファイル名</label><input id="f_name" placeholder="例: 2026-05-22 橋台A"></div>
+      <div class="toolbar" style="margin-bottom:4px;">
+        <button class="btn btn-xls" onclick="fileSave()">保存／更新</button>
+        <button class="btn navbtn add" onclick="fileNew()">新規ファイル</button>
+      </div>
+      <div class="hint" id="f_status"></div>
+    </div>
+    <div class="card">
+      <div class="qtitle">保存済みファイル一覧（タップ操作）</div>
+      <table class="ftbl"><thead><tr><th>ファイル名</th><th>打設日</th><th>種類</th><th>累計㎥</th><th></th></tr></thead><tbody id="filerows"></tbody></table>
+    </div>
+    <div class="card">
+      <div class="qtitle">集計（保存済みファイル）</div>
+      <div class="toolbar" style="margin-top:0;">
+        <button class="btn btn-xls" onclick="exportAggExcel()">Excel出力</button>
+        <button class="btn btn-pdf" onclick="printAgg()">PDF出力</button>
+        <button class="btn btn-csv" onclick="exportAggCSV()">CSV</button>
+      </div>
+      <div style="font-weight:700;font-size:12px;color:#52606d;margin:6px 0 2px;">打設日別</div>
+      <table class="ftbl"><thead><tr><th>打設日</th><th>打設量㎥</th><th>台数</th><th>件数</th></tr></thead><tbody id="aggdate"></tbody></table>
+      <div style="font-weight:700;font-size:12px;color:#52606d;margin:8px 0 2px;">生コン種類別</div>
+      <table class="ftbl"><thead><tr><th>種類</th><th>打設量㎥</th><th>台数</th><th>件数</th></tr></thead><tbody id="aggkind"></tbody></table>
+      <div class="hint" id="aggtot" style="margin-top:8px;font-weight:700;color:var(--accent);"></div>
+      <div class="hint">保存済みファイルを集計します。現在の入力は「保存／更新」で一覧に反映されます。</div>
+    </div>
+    <div id="fmsg" class="msg"></div>
+  </section>
+</div>
+
+<script>
+const STORE="namakon_dasetsu_v4";
+const COLD_LIMIT=120, HOT_LIMIT=90, WARN_MARGIN=15, TRANSPORT_WARN=90;
+const ATSTEP=0.5, CTSTEP=0.5, VOLSTEP=0.5;
+const WD=["日","月","火","水","木","金","土"];
+const QF=["q_kind","q_fc","q_sample","q_s3","q_s7","q_s28","q_slump_spec","q_slump_tol","q_slump_act","q_air_spec","q_air_tol","q_air_act","q_water_lim","q_water_act"];
+let rows=[]; let cur=0;
+
+function g(id){ return document.getElementById(id); }
+function num(v){ const n=parseFloat(v); return isNaN(n)?null:n; }
+function fmt1(v){ const n=num(v); return n!=null?n.toFixed(1):""; }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function parseMin(t){ if(!t) return null; const m=/^(\d{1,2}):(\d{2})$/.exec(String(t).trim()); if(!m) return null; return (+m[1])*60+(+m[2]); }
+function fmtDur(min){ if(min==null||isNaN(min)) return ""; const s=min<0?"-":""; min=Math.abs(min); return s+Math.floor(min/60)+":"+String(min%60).padStart(2,"0"); }
+function weekdayJ(ds){ if(!ds) return ""; const p=String(ds).split("-"); if(p.length!==3) return ""; const d=new Date(+p[0],+p[1]-1,+p[2]); return WD[d.getDay()]||""; }
+function dateLabel(ds){ if(!ds) return ""; const p=String(ds).split("-"); if(p.length!==3) return ""; return `${p[0]}年${+p[1]}月${+p[2]}日（${weekdayJ(ds)}）`; }
+
+/* ---- 祝日・営業日 ---- */
+function fmtD(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+const _hcache={};
+function jpHolidays(year){ if(_hcache[year]) return _hcache[year];
+  const set=new Set(); const add=(m,d)=>{ if(d) set.add(`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`); };
+  add(1,1); add(2,11); add(2,23); add(4,29); add(5,3); add(5,4); add(5,5); add(8,11); add(11,3); add(11,23);
+  const nthMon=(month,nth)=>{ let cnt=0; for(let day=1;day<=31;day++){ const d=new Date(year,month-1,day); if(d.getMonth()!==month-1) break; if(d.getDay()===1){cnt++; if(cnt===nth) return day;} } return null; };
+  add(1,nthMon(1,2)); add(7,nthMon(7,3)); add(9,nthMon(9,3)); add(10,nthMon(10,2));
+  add(3,Math.floor(20.8431+0.242194*(year-1980)-Math.floor((year-1980)/4)));
+  add(9,Math.floor(23.2488+0.242194*(year-1980)-Math.floor((year-1980)/4)));
+  [...set].sort().forEach(ds=>{ const p=ds.split("-"); const dt=new Date(+p[0],+p[1]-1,+p[2]); if(dt.getDay()===0){ const n=new Date(dt); do{ n.setDate(n.getDate()+1);}while(set.has(fmtD(n))); set.add(fmtD(n)); } });
+  for(let dt=new Date(year,0,1); dt<=new Date(year,11,31); dt.setDate(dt.getDate()+1)){ const ds=fmtD(dt); if(set.has(ds)) continue; const w=dt.getDay(); if(w===0||w===6) continue;
+    const pv=new Date(dt); pv.setDate(pv.getDate()-1); const nx=new Date(dt); nx.setDate(nx.getDate()+1);
+    if(set.has(fmtD(pv))&&set.has(fmtD(nx))) set.add(ds); }
+  _hcache[year]=set; return set;
+}
+function isBiz(d){ const w=d.getDay(); return w!==0&&w!==6&&!jpHolidays(d.getFullYear()).has(fmtD(d)); }
+function nextBiz(d){ const x=new Date(d); while(!isBiz(x)) x.setDate(x.getDate()+1); return x; }
+function predLabel(baseDs,n){ if(!baseDs) return "—"; const p=String(baseDs).split("-"); if(p.length!==3) return "—";
+  const b=new Date(+p[0],+p[1]-1,+p[2]); b.setDate(b.getDate()+n); const d=nextBiz(b);
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}（${WD[d.getDay()]}）`; }
+
+function baseTemp(){ const fv=num(g('h_basetemp').value); if(fv!=null) return fv;
+  const v=rows.map(r=>num(r.at)).filter(x=>x!=null); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
+function baseCtemp(){ const fv=num(g('h_basectemp').value); if(fv!=null) return fv;
+  const v=rows.map(r=>num(r.ct)).filter(x=>x!=null); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null; }
+function effAt(r){ const e=num(r.at); return e!=null?e:baseTemp(); }
+function effCt(r){ const e=num(r.ct); return e!=null?e:baseCtemp(); }
+
+function blankRow(){ return {a:"",b:"",c:"",d:"",vol:"4.0",ct:"",at:"",note:""}; }
+function isActive(r){ return !!(r.a||r.b||r.c||r.d||(r.ct!==""&&r.ct!=null)||(r.at!==""&&r.at!=null)||(r.note&&String(r.note).trim())); }
+
+function calcRow(r){
+  const A=parseMin(r.a), B=parseMin(r.b), D=parseMin(r.d);
+  let ba=null, da=null;
+  if(A!=null&&B!=null){ ba=B-A; if(ba<0) ba=null; }
+  if(A!=null&&D!=null){ da=D-A; if(da<0) da=null; }
+  const at=effAt(r); const limit=(at!=null&&at>25)?HOT_LIMIT:COLD_LIMIT;
+  let daClass="", baClass="";
+  if(da!=null){ if(da>limit) daClass="warn-red"; else if(da>limit-WARN_MARGIN) daClass="warn-yellow"; }
+  if(ba!=null&&ba>TRANSPORT_WARN) baClass="warn-yellow";
+  return {ba,da,limit,daClass,baClass};
+}
+
+function showTab(name){
+  document.querySelectorAll(".tabsec").forEach(s=>s.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  g("tab-"+name).classList.add("active"); g("tabbtn-"+name).classList.add("active");
+  if(name==="quality") qRender();
+  if(name==="files") renderFiles();
+}
+/* 音声認識の後処理：呼び強度はハイフン整形、名称・測点は用語補正 */
+const CEMENT=[["ビービー","BB"],["ビーエー","BA"],["ビーシー","BC"],["エフエー","FA"],["エフビー","FB"],["エヌ","N"],["エム","M"],["エル","L"],["エイチ","H"],["ビー","B"]];
+const TERM={"鏡台":"橋台","床板":"床版","用壁":"擁壁","容壁":"擁壁","海苔面":"法面","乗り面":"法面","のり面":"法面","速点":"測点","側点":"測点","堅壁":"竪壁","補装":"舗装"};
+function zen2han(t){ return String(t).replace(/[０-９Ａ-Ｚａ-ｚ]/g, ch=>String.fromCharCode(ch.charCodeAt(0)-0xFEE0)); }
+function normKind(t){ t=zen2han(String(t).trim());
+  CEMENT.forEach(([k,v])=>{ t=t.split(k).join(v); });
+  t=t.replace(/[のノ・,，、。\s]+/g,"-").replace(/[ー－—–]/g,"-").toUpperCase().replace(/-+/g,"-").replace(/^-|-$/g,"");
+  return t.replace(/(\d)-([A-Z]+)$/,"$1$2"); }
+function normName(t){ t=zen2han(String(t).trim());
+  t=t.split("ナンバー").join("No.").split("ナンバ").join("No.").split("プラス").join("+").split("マイナス").join("-");
+  t=t.replace(/[、。，．]/g,"").replace(/　/g," ").trim();
+  Object.keys(TERM).forEach(k=>{ t=t.split(k).join(TERM[k]); }); return t; }
+function startVoice(id){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){ alert("この端末/ブラウザは音声認識に未対応です。キーボードのマイク（音声入力）ボタンをご利用ください。"); return; }
+  const rec=new SR(); rec.lang="ja-JP"; rec.interimResults=true; rec.maxAlternatives=1; rec.continuous=false;
+  const el=g(id); const btn=document.querySelector('[data-mic="'+id+'"]'); if(btn) btn.classList.add("rec");
+  const norm=s=>(id==="h_kind"||id==="q_kind")?normKind(s):normName(s);
+  let finalText="", lastShown="";
+  rec.onresult=e=>{ let interim=""; for(let i=e.resultIndex;i<e.results.length;i++){ const r=e.results[i]; if(r.isFinal) finalText+=r[0].transcript; else interim+=r[0].transcript; }
+    lastShown=finalText+interim; el.value=norm(lastShown); };
+  rec.onerror=()=>{ if(btn) btn.classList.remove("rec"); };
+  rec.onend=()=>{ if(btn) btn.classList.remove("rec"); el.value=norm(finalText||lastShown); el.dispatchEvent(new Event("input",{bubbles:true})); };
+  try{ rec.start(); }catch(e){ if(btn) btn.classList.remove("rec"); }
+}
+
+function clampCur(){ if(cur<0) cur=0; if(cur>rows.length-1) cur=rows.length-1; if(rows.length===0){ rows.push(blankRow()); cur=0; } }
+function renderPanel(){
+  clampCur(); const r=rows[cur];
+  g("p_title").textContent=(cur+1)+"号車"; g("p_count").textContent=(cur+1)+" / "+rows.length+"台";
+  g("p_a").value=r.a; g("p_b").value=r.b; g("p_c").value=r.c; g("p_d").value=r.d;
+  g("p_vol").value=fmt1(r.vol);
+  const pct=g("p_ct"); pct.value=r.ct===""?"":fmt1(r.ct); pct.placeholder=baseCtemp()!=null?baseCtemp().toFixed(1):"基準未設定";
+  const pat=g("p_at"); pat.value=r.at===""?"":fmt1(r.at); pat.placeholder=baseTemp()!=null?baseTemp().toFixed(1):"基準未設定";
+  g("p_note").value=r.note||"";
+  updatePanelCalc();
+}
+function updatePanelCalc(){
+  const c=calcRow(rows[cur]);
+  g("p_ba").textContent=fmtDur(c.ba)||"–";
+  const da=g("p_da"); da.textContent=fmtDur(c.da)||"–"; da.className="bigval "+(c.daClass||"");
+  const b=g("p_badge");
+  if(c.da==null){ b.textContent=""; b.className="badge"; }
+  else if(c.daClass==="warn-red"){ b.textContent="超過"; b.className="badge bred"; }
+  else if(c.daClass==="warn-yellow"){ b.textContent="注意"; b.className="badge byel"; }
+  else { b.textContent="OK"; b.className="badge bok"; }
+  g("p_limit").textContent="制限 "+c.limit+"分";
+}
+function renderList(){
+  const tb=g("listrows"); tb.innerHTML="";
+  rows.forEach((r,i)=>{
+    const c=calcRow(r); const act=isActive(r);
+    const tr=document.createElement("tr"); if(i===cur) tr.className="curRow";
+    tr.onclick=()=>{ cur=i; renderPanel(); renderList(); };
+    const ct=effCt(r), at=effAt(r);
+    tr.innerHTML=`<td>${i+1}</td><td>${esc(r.b||r.a||"–")}</td>`+
+      `<td><span class="${c.daClass||''}">${fmtDur(c.da)||"–"}</span></td>`+
+      `<td>${act&&num(r.vol)!=null?num(r.vol).toFixed(1):"–"}</td>`+
+      `<td>${ct!=null?ct.toFixed(1):"–"}</td><td>${at!=null?at.toFixed(1):"–"}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function summarize(){
+  let vol=0, cnt=0, das=[], cts=[], ats=[];
+  rows.forEach(r=>{ if(!isActive(r)) return; cnt++;
+    const v=num(r.vol); if(v!=null) vol+=v;
+    const c=calcRow(r); if(c.da!=null) das.push(c.da);
+    const ct=effCt(r); if(ct!=null) cts.push(ct);
+    const at=effAt(r); if(at!=null) ats.push(at);
+  });
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  const plan=num(g("h_plan").value);
+  g("s_vol").textContent=vol.toFixed(1);
+  g("s_rem").textContent=(plan!=null)?(plan-vol).toFixed(1):"—";
+  g("s_cnt").textContent=cnt;
+  const ag=avg(das); g("s_avgg").textContent=ag!=null?fmtDur(Math.round(ag)):"—";
+  g("s_maxg").textContent=das.length?fmtDur(Math.max(...das)):"—";
+  const aat=avg(ats); g("s_at").textContent=aat!=null?aat.toFixed(1)+"℃":"—";
+  const act=avg(cts); g("s_ct").textContent=act!=null?act.toFixed(1)+"℃":"—";
+}
+function refreshAll(){ renderPanel(); renderList(); summarize(); save(); }
+
+function setField(k,v){ rows[cur][k]=v; updatePanelCalc(); summarize(); renderList(); save(); }
+function normField(k){ const n=num(rows[cur][k]); if(n!=null){ rows[cur][k]=n.toFixed(1); g('p_'+k).value=n.toFixed(1); } summarize(); renderList(); save(); }
+function stampP(field){ const d=new Date(); const v=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  rows[cur][field]=v; g('p_'+field).value=v; updatePanelCalc(); summarize(); renderList(); save(); }
+function stepVal(k,delta,base){ const c=num(rows[cur][k]); const start=(c!=null)?c:base; const b=(start!=null)?start:0;
+  const nv=(Math.round((b+delta)*10)/10).toFixed(1); rows[cur][k]=nv; g('p_'+k).value=nv;
+  updatePanelCalc(); summarize(); renderList(); save(); }
+
+function prevT(){ if(cur>0){ cur--; renderPanel(); renderList(); } }
+function nextT(){ if(cur<rows.length-1){ cur++; renderPanel(); renderList(); } else { addT(); } }
+function addT(){ rows.push(blankRow()); cur=rows.length-1; refreshAll(); }
+function delT(){ if(rows.length<=1){ rows[0]=blankRow(); } else { rows.splice(cur,1); if(cur>rows.length-1) cur=rows.length-1; } refreshAll(); }
+function clearAll(){ if(!confirm("打設記録をすべて消去しますか？")) return; rows=[blankRow()]; cur=0;
+  ["h_no","h_struct","h_place","h_date","h_plan"].forEach(id=>g(id).value=""); g("h_date_disp").value=""; refreshAll(); qRender(); }
+
+/* ---------- 品質管理 ---------- */
+function onKind(){ const k=g("q_kind").value; const p=String(k).split("-");
+  if(num(p[0])!=null && g("q_fc").value==="") g("q_fc").value=num(p[0]);
+  if(p.length>1 && num(p[1])!=null && g("q_slump_spec").value==="") g("q_slump_spec").value=num(p[1]);
+  g("h_kind").value=k; qRender(); save(); }
+function qNorm(id){ const n=num(g(id).value); if(n!=null) g(id).value=n.toFixed(1); qRender(); }
+function onSample(){ g("q_sample_disp").value=dateLabel(g("q_sample").value); qRender(); }
+function jset(id,ok){ const e=g(id); if(ok===null){ e.textContent="—"; e.className="jud na"; }
+  else { e.textContent=ok?"○ 合格":"× 不合格"; e.className="jud "+(ok?"ok":"ng"); } }
+function qRender(){
+  const base=(g("q_sample").value||g("h_date").value);
+  g("q_pourdate").value=dateLabel(g("h_date").value);
+  if(g("q_kind").value==="" && g("h_kind").value!=="") g("q_kind").value=g("h_kind").value;
+  g("q_d3").textContent=predLabel(base,3); g("q_d7").textContent=predLabel(base,7); g("q_d28").textContent=predLabel(base,28);
+  const fc=num(g("q_fc").value);
+  const sj=(id)=>{ const a=num(g(id).value); return (fc!=null&&a!=null)?(a>=fc):null; };
+  const jref=(sid,jid)=>{ const e=g(jid); e.textContent=(num(g(sid).value)!=null)?"参考":"—"; e.className="jud na"; };
+  jref("q_s3","q_j3"); jref("q_s7","q_j7"); jset("q_j28",sj("q_s28"));
+  const ss=num(g("q_slump_spec").value), st=num(g("q_slump_tol").value), sa=num(g("q_slump_act").value);
+  jset("q_slump_j",(ss!=null&&st!=null&&sa!=null)?(Math.abs(sa-ss)<=st):null);
+  const as=num(g("q_air_spec").value), at=num(g("q_air_tol").value), aa=num(g("q_air_act").value);
+  jset("q_air_j",(as!=null&&at!=null&&aa!=null)?(Math.abs(aa-as)<=at):null);
+  const wl=num(g("q_water_lim").value), wa=num(g("q_water_act").value);
+  jset("q_water_j",(wl!=null&&wa!=null)?(wa<=wl):null);
+  save();
+}
+function qClear(){ if(!confirm("品質管理の入力を消去しますか？")) return;
+  QF.forEach(id=>{ const el=g(id); if(el) el.value=""; });
+  g("q_sample_disp").value=""; g("q_slump_tol").value="2.5"; g("q_air_spec").value="4.5"; g("q_air_tol").value="1.5"; g("q_water_lim").value="175";
+  qRender(); }
+
+function save(){ try{ const h={}; ["h_no","h_name","h_struct","h_place","h_date","h_plan","h_basetemp","h_basectemp","h_kind"].forEach(id=>h[id]=g(id).value);
+  const q={}; QF.forEach(id=>q[id]=g(id).value);
+  localStorage.setItem(STORE, JSON.stringify({h,rows,cur,q})); }catch(e){} }
+function load(){ try{ const d=JSON.parse(localStorage.getItem(STORE)); if(!d) return;
+  if(d.h) Object.keys(d.h).forEach(id=>{ const el=g(id); if(el) el.value=d.h[id]; });
+  if(d.q) Object.keys(d.q).forEach(id=>{ const el=g(id); if(el&&d.q[id]!=="") el.value=d.q[id]; });
+  if(d.rows&&d.rows.length) rows=d.rows; if(typeof d.cur==="number") cur=d.cur; }catch(e){} }
+
+/* ---------- 現場ファイル ---------- */
+const FILESTORE="namakon_files_v1";
+let files=[]; let currentFileId=null;
+function loadFiles(){ try{ const d=JSON.parse(localStorage.getItem(FILESTORE)); if(d){ files=d.files||[]; currentFileId=d.currentFileId||null; } }catch(e){} }
+function saveFiles(){ try{ localStorage.setItem(FILESTORE, JSON.stringify({files,currentFileId})); }catch(e){} }
+function collectState(){ const h={}; ["h_no","h_name","h_struct","h_place","h_date","h_plan","h_basetemp","h_basectemp","h_kind"].forEach(id=>h[id]=g(id).value);
+  const q={}; QF.forEach(id=>q[id]=g(id).value); return {h, rows:JSON.parse(JSON.stringify(rows)), q}; }
+function applyState(s){ const h=s.h||{};
+  ["h_no","h_name","h_struct","h_place","h_date","h_plan","h_basetemp","h_basectemp","h_kind"].forEach(id=>{ g(id).value=(h[id]!=null)?h[id]:(id==="h_name"?"R6圏央道高須賀地区改良その6工事":""); });
+  rows=(s.rows&&s.rows.length)?JSON.parse(JSON.stringify(s.rows)):[blankRow()]; cur=0;
+  const q=s.q||{}; QF.forEach(id=>{ g(id).value=(q[id]!=null)?q[id]:""; });
+  if(!q.q_slump_tol) g("q_slump_tol").value="2.5"; if(!q.q_air_spec) g("q_air_spec").value="4.5"; if(!q.q_air_tol) g("q_air_tol").value="1.5"; if(!q.q_water_lim) g("q_water_lim").value="175";
+  g("q_kind").value=g("h_kind").value;
+  onDate(); onSample(); refreshAll(); qRender(); save(); }
+function autoName(){ const d=g("h_date").value, s=g("h_struct").value, p=g("h_place").value; const n=[d,s||p].filter(Boolean).join(" "); return n||("打設記録 "+new Date().toLocaleDateString("ja-JP")); }
+function fileSave(){ const name=(g("f_name").value.trim()||autoName()); const state=collectState();
+  let f=currentFileId?files.find(x=>x.id===currentFileId):null;
+  if(f){ f.name=name; f.data=state; f.savedAt=Date.now(); } else { const id="f"+Date.now(); f={id,name,data:state,savedAt:Date.now()}; files.push(f); currentFileId=id; }
+  g("f_name").value=name; saveFiles(); renderFiles(); showMsg("ファイル「"+name+"」を保存しました。",true,"fmsg"); }
+function fileNew(){ if(!confirm("新規ファイルを作成します。現在の作業内容は保存済みファイルには影響しません。よろしいですか？")) return;
+  currentFileId=null; applyState({h:{},rows:[blankRow()],q:{}}); g("f_name").value=""; saveFiles(); renderFiles(); showMsg("新規ファイルを開始しました。打設記録タブで入力してください。",true,"fmsg"); }
+function fileOpen(id){ const f=files.find(x=>x.id===id); if(!f) return; currentFileId=id; applyState(f.data); g("f_name").value=f.name; saveFiles(); renderFiles(); showTab("dasetsu"); }
+function fileDel(id){ const f=files.find(x=>x.id===id); if(!f) return; if(!confirm("「"+f.name+"」を削除しますか？")) return; files=files.filter(x=>x.id!==id); if(currentFileId===id) currentFileId=null; saveFiles(); renderFiles(); }
+function fileVol(f){ let v=0,c=0; ((f.data&&f.data.rows)||[]).forEach(r=>{ if(isActive(r)){ c++; const n=num(r.vol); if(n!=null) v+=n; } }); return {v,c}; }
+function renderFiles(){
+  const tb=g("filerows"); if(!tb) return; tb.innerHTML="";
+  if(!files.length){ tb.innerHTML='<tr><td colspan="5" style="color:#9aa6b2">保存済みファイルはありません</td></tr>'; }
+  files.slice().sort((a,b)=>String((b.data.h||{}).h_date||"").localeCompare(String((a.data.h||{}).h_date||""))).forEach(f=>{
+    const o=fileVol(f); const mark=f.id===currentFileId?" ◀編集中":"";
+    const tr=document.createElement("tr");
+    tr.innerHTML='<td style="text-align:left">'+esc(f.name)+mark+'</td><td>'+esc((f.data.h||{}).h_date||"")+'</td><td>'+esc((f.data.h||{}).h_kind||"")+'</td><td>'+o.v.toFixed(1)+'</td>'+
+      '<td><button class="minibtn" data-open="'+f.id+'">開く</button> <button class="minibtn del" data-del="'+f.id+'">削除</button></td>';
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>fileOpen(b.getAttribute("data-open")));
+  tb.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>fileDel(b.getAttribute("data-del")));
+  const fs=g("f_status"); if(fs){ const cf=files.find(x=>x.id===currentFileId); fs.textContent=cf?("編集中ファイル: "+cf.name):"未保存の作業中です。「保存／更新」で一覧に追加されます。"; }
+  renderAgg();
+}
+function renderAgg(){
+  const byD={},byK={}; let tv=0,tc=0;
+  files.forEach(f=>{ const o=fileVol(f); const h=f.data.h||{}; const d=h.h_date||"(未設定)"; const k=h.h_kind||"(未設定)";
+    (byD[d]=byD[d]||{v:0,c:0,n:0}); byD[d].v+=o.v; byD[d].c+=o.c; byD[d].n++;
+    (byK[k]=byK[k]||{v:0,c:0,n:0}); byK[k].v+=o.v; byK[k].c+=o.c; byK[k].n++; tv+=o.v; tc+=o.c; });
+  const er='<tr><td colspan="4" style="color:#9aa6b2">データなし</td></tr>';
+  const dEl=g("aggdate"); if(dEl) dEl.innerHTML=Object.keys(byD).sort().map(d=>'<tr><td>'+esc(dateLabel(d)||d)+'</td><td>'+byD[d].v.toFixed(1)+'</td><td>'+byD[d].c+'</td><td>'+byD[d].n+'</td></tr>').join("")||er;
+  const kEl=g("aggkind"); if(kEl) kEl.innerHTML=Object.keys(byK).sort().map(k=>'<tr><td>'+esc(k)+'</td><td>'+byK[k].v.toFixed(1)+'</td><td>'+byK[k].c+'</td><td>'+byK[k].n+'</td></tr>').join("")||er;
+  const tEl=g("aggtot"); if(tEl) tEl.textContent="総打設量 "+tv.toFixed(1)+" ㎥ ／ "+tc+" 台 ／ "+files.length+" ファイル";
+}
+function exportAggCSV(){
+  const byD={},byK={};
+  files.forEach(f=>{ const o=fileVol(f); const h=f.data.h||{}; const d=h.h_date||"(未設定)"; const k=h.h_kind||"(未設定)";
+    (byD[d]=byD[d]||{v:0,c:0,n:0}); byD[d].v+=o.v; byD[d].c+=o.c; byD[d].n++;
+    (byK[k]=byK[k]||{v:0,c:0,n:0}); byK[k].v+=o.v; byK[k].c+=o.c; byK[k].n++; });
+  let out=[["■ファイル一覧"],["ファイル名","打設日","構造物名","打設箇所","種類","打設量㎥","台数"]];
+  files.forEach(f=>{ const o=fileVol(f); const h=f.data.h||{}; out.push([f.name,h.h_date||"",h.h_struct||"",h.h_place||"",h.h_kind||"",o.v.toFixed(1),o.c]); });
+  out.push([],["■打設日別集計"],["打設日","打設量㎥","台数","件数"]);
+  Object.keys(byD).sort().forEach(d=>out.push([d,byD[d].v.toFixed(1),byD[d].c,byD[d].n]));
+  out.push([],["■生コン種類別集計"],["種類","打設量㎥","台数","件数"]);
+  Object.keys(byK).sort().forEach(k=>out.push([k,byK[k].v.toFixed(1),byK[k].c,byK[k].n]));
+  const csv=out.map(r=>r.map(x=>'"'+String(x==null?"":x).replace(/"/g,'""')+'"').join(",")).join("\r\n");
+  const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
+  download(blob,"現場ファイル集計_"+new Date().toISOString().slice(0,10)+".csv"); showMsg("集計CSVを出力しました。",true,"fmsg");
+}
+function aggData(){ const byD={},byK={}; let tv=0,tc=0; const list=[];
+  files.forEach(f=>{ const o=fileVol(f); const h=f.data.h||{}; const d=h.h_date||"(未設定)"; const k=h.h_kind||"(未設定)";
+    list.push({name:f.name,date:h.h_date||"",struct:h.h_struct||"",place:h.h_place||"",kind:h.h_kind||"",v:o.v,c:o.c});
+    (byD[d]=byD[d]||{v:0,c:0,n:0}); byD[d].v+=o.v; byD[d].c+=o.c; byD[d].n++;
+    (byK[k]=byK[k]||{v:0,c:0,n:0}); byK[k].v+=o.v; byK[k].c+=o.c; byK[k].n++; tv+=o.v; tc+=o.c; });
+  return {list,byD,byK,tv,tc}; }
+async function exportAggExcel(){
+  if(typeof ExcelJS==="undefined"){ showMsg("Excelライブラリを読み込めませんでした。",false,"fmsg"); return; }
+  try{
+    const wb=new ExcelJS.Workbook(); const FONT="ＭＳ Ｐゴシック";
+    const thin={style:"thin",color:{argb:"FF000000"}}; const allbox={top:thin,left:thin,bottom:thin,right:thin};
+    const fill=hex=>({type:"pattern",pattern:"solid",fgColor:{argb:"FF"+hex}});
+    const ws=wb.addWorksheet("現場ファイル集計",{views:[{showGridLines:false}]});
+    [26,14,16,16,12,11,8].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    const a=aggData(); let r=1;
+    ws.mergeCells("A1:G1"); const t=ws.getCell("A1"); t.value="現場ファイル集計"; t.font={name:FONT,size:15,bold:true}; t.alignment={horizontal:"center",vertical:"middle"}; ws.getRow(1).height=24;
+    r=3; ws.mergeCells("A3:G3"); const tot=ws.getCell("A3"); tot.value="総打設量 "+a.tv.toFixed(1)+" ㎥ ／ "+a.tc+" 台 ／ "+files.length+" ファイル"; tot.font={name:FONT,size:11,bold:true};
+    const hrow=(arr)=>{ arr.forEach((x,i)=>{ const c=ws.getCell(r,i+1); c.value=x; c.font={name:FONT,size:10,bold:true}; c.fill=fill("DDEBF7"); c.alignment={horizontal:"center",vertical:"middle"}; c.border=allbox; }); r++; };
+    const drow=(arr,leftcols)=>{ arr.forEach((x,i)=>{ const c=ws.getCell(r,i+1); c.value=x; c.font={name:FONT,size:10}; c.alignment={horizontal:(i<leftcols?"left":"center"),vertical:"middle"}; c.border=allbox; }); };
+    r=5; const s1=ws.getCell(r,1); s1.value="■ ファイル一覧"; s1.font={name:FONT,size:11,bold:true}; r++;
+    hrow(["ファイル名","打設日","構造物名","打設箇所","種類","打設量㎥","台数"]);
+    if(!a.list.length){ ws.mergeCells(r,1,r,7); const c=ws.getCell(r,1); c.value="保存済みファイルなし"; c.border=allbox; r++; }
+    a.list.forEach(f=>{ drow([f.name,dateLabel(f.date)||f.date,f.struct,f.place,f.kind,f.v,f.c],1); ws.getCell(r,6).numFmt="0.0"; r++; });
+    r++; const s2=ws.getCell(r,1); s2.value="■ 打設日別集計"; s2.font={name:FONT,size:11,bold:true}; r++;
+    hrow(["打設日","打設量㎥","台数","件数"]);
+    Object.keys(a.byD).sort().forEach(d=>{ drow([dateLabel(d)||d,a.byD[d].v,a.byD[d].c,a.byD[d].n],1); ws.getCell(r,2).numFmt="0.0"; r++; });
+    r++; const s3=ws.getCell(r,1); s3.value="■ 生コン種類別集計"; s3.font={name:FONT,size:11,bold:true}; r++;
+    hrow(["種類","打設量㎥","台数","件数"]);
+    Object.keys(a.byK).sort().forEach(k=>{ drow([k,a.byK[k].v,a.byK[k].c,a.byK[k].n],1); ws.getCell(r,2).numFmt="0.0"; r++; });
+    ws.pageSetup={orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
+    const buf=await wb.xlsx.writeBuffer(); const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    download(blob,"現場ファイル集計_"+new Date().toISOString().slice(0,10)+".xlsx"); showMsg("集計Excelを出力しました。",true,"fmsg");
+  }catch(e){ showMsg("Excel出力でエラー: "+e.message,false,"fmsg"); }
+}
+function printAgg(){
+  const a=aggData();
+  let list='<div class="sec">ファイル一覧</div><table><tr><th>ファイル名</th><th>打設日</th><th>構造物名</th><th>打設箇所</th><th>種類</th><th>打設量㎥</th><th>台数</th></tr>';
+  if(!a.list.length) list+='<tr><td colspan="7">保存済みファイルなし</td></tr>';
+  a.list.forEach(f=>{ list+='<tr><td style="text-align:left">'+esc(f.name)+'</td><td>'+esc(dateLabel(f.date)||f.date)+'</td><td>'+esc(f.struct)+'</td><td>'+esc(f.place)+'</td><td>'+esc(f.kind)+'</td><td>'+f.v.toFixed(1)+'</td><td>'+f.c+'</td></tr>'; });
+  list+='</table>';
+  let dt='<div class="sec">打設日別集計</div><table><tr><th>打設日</th><th>打設量㎥</th><th>台数</th><th>件数</th></tr>';
+  Object.keys(a.byD).sort().forEach(d=>{ dt+='<tr><td>'+esc(dateLabel(d)||d)+'</td><td>'+a.byD[d].v.toFixed(1)+'</td><td>'+a.byD[d].c+'</td><td>'+a.byD[d].n+'</td></tr>'; });
+  dt+='</table>';
+  let kd='<div class="sec">生コン種類別集計</div><table><tr><th>種類</th><th>打設量㎥</th><th>台数</th><th>件数</th></tr>';
+  Object.keys(a.byK).sort().forEach(k=>{ kd+='<tr><td>'+esc(k)+'</td><td>'+a.byK[k].v.toFixed(1)+'</td><td>'+a.byK[k].c+'</td><td>'+a.byK[k].n+'</td></tr>'; });
+  kd+='</table>';
+  const tot='<div style="margin:6px 0 10px;font-weight:bold">総打設量 '+a.tv.toFixed(1)+' ㎥ ／ '+a.tc+' 台 ／ '+files.length+' ファイル</div>';
+  printDoc("現場ファイル集計","<h2>現場ファイル集計</h2>"+tot+list+dt+kd);
+}
+
+function showMsg(t,ok,id){ const m=g(id||"msg"); m.textContent=t; m.className="msg "+(ok?"ok":"err"); setTimeout(()=>{m.className="msg";},6000); }
+
+/* ---------- Excel 出力（mode: 'dasetsu' | 'quality'） ---------- */
+async function exportExcel(mode){
+  const mid = mode==='quality' ? 'qmsg':'msg';
+  if(typeof ExcelJS==="undefined"){ showMsg("Excelライブラリを読み込めませんでした（オフライン等）。PDF/CSV出力をご利用ください。",false,mid); return; }
+  try{
+    const wb=new ExcelJS.Workbook();
+    const FONT="ＭＳ Ｐゴシック";
+    const thin={style:"thin",color:{argb:"FF000000"}};
+    const allbox={top:thin,left:thin,bottom:thin,right:thin};
+    const fill=hex=>({type:"pattern",pattern:"solid",fgColor:{argb:"FF"+hex}});
+    const H=id=>g(id).value;
+    const col=L=>{let n=0;for(const ch of L)n=n*26+(ch.charCodeAt(0)-64);return n;};
+
+    if(mode!=='quality'){
+      const ws=wb.addWorksheet("打設チェックシート",{views:[{showGridLines:false}]});
+      const widths=[8.7,9.5,9.5,9.5,9.5,10,12.5,9,11,8.5,18]; widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+      const setRange=(rng,fn)=>{ const m=/([A-Z]+)(\d+):([A-Z]+)(\d+)/.exec(rng); const c1=col(m[1]),r1=+m[2],c2=col(m[3]),r2=+m[4]; for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){ fn(ws.getCell(r,c)); } };
+      const lbl=(addr,text)=>{ const c=ws.getCell(addr); c.value=text; c.font={name:FONT,size:10,bold:true}; c.alignment={vertical:"middle",horizontal:"center",wrapText:true}; c.fill=fill("EFEFEF"); c.border=allbox; };
+      const val=(addr,text)=>{ const c=ws.getCell(addr); c.value=text; c.font={name:FONT,size:10}; c.alignment={vertical:"middle",horizontal:"left",wrapText:true}; c.border=allbox; };
+      ws.mergeCells("B1:E1"); ws.mergeCells("B2:E2"); ws.mergeCells("I1:K1"); ws.mergeCells("I2:K2"); ws.mergeCells("I3:K3");
+      lbl("A1","工事番号"); val("B1",H("h_no")); lbl("A2","工事名"); val("B2",H("h_name"));
+      lbl("H1","構造物名"); val("I1",H("h_struct")); lbl("H2","打設箇所"); val("I2",H("h_place")); lbl("H3","打設日"); val("I3",dateLabel(H("h_date")));
+      ["B1:E1","B2:E2","I1:K1","I2:K2","I3:K3"].forEach(rg=>setRange(rg,c=>{c.border=allbox;}));
+      ws.mergeCells("A4:K4"); const tt=ws.getCell("A4"); tt.value="生コン打設チェックシート"; tt.font={name:FONT,size:16,bold:true}; tt.alignment={vertical:"middle",horizontal:"center"}; ws.getRow(4).height=26;
+      const HR1=6,HR2=7; ws.getRow(HR1).height=16; ws.getRow(HR2).height=46;
+      const hc=(addr,text)=>{ const c=ws.getCell(addr); c.value=text; c.font={name:FONT,size:9,bold:true}; c.alignment={vertical:"middle",horizontal:"center",wrapText:true}; c.fill=fill("DDEBF7"); c.border=allbox; };
+      ws.mergeCells(`A${HR1}:A${HR2}`); hc(`A${HR1}`,"車両\n(台数)");
+      ws.mergeCells(`H${HR1}:H${HR2}`); hc(`H${HR1}`,"打設量\n(㎥)");
+      ws.mergeCells(`I${HR1}:J${HR1}`); hc(`I${HR1}`,"温度管理");
+      ws.mergeCells(`K${HR1}:K${HR2}`); hc(`K${HR1}`,"備考");
+      [["B","A"],["C","B"],["D","C"],["E","D"],["F","B－A"],["G","D－A"]].forEach(([cc,t])=>hc(cc+HR1,t));
+      const desc={B:"プラント\n出発時間",C:"到着時間",D:"打設開始\n時間",E:"打設終了\n時間",F:"運搬時間",G:"練りはじめ\n～打設完了\nまでの時間",I:"コンクリート\n温度(℃)",J:"気温\n(℃)"};
+      Object.keys(desc).forEach(cc=>hc(cc+HR2,desc[cc]));
+      setRange(`I${HR1}:J${HR1}`,c=>{c.border=allbox;});
+      const START=HR2+1; const N=Math.max(25,rows.length); let r=START;
+      for(let idx=0; idx<N; idx++){
+        const row=rows[idx]; const active=row?isActive(row):false; const cc=row?calcRow(row):{};
+        ws.getRow(r).height=20;
+        const cells = active ? {1:idx+1,2:row.a,3:row.b,4:row.c,5:row.d,6:fmtDur(cc.ba),7:fmtDur(cc.da),8:num(row.vol),9:effCt(row),10:effAt(row),11:row.note||""}
+          : {1:idx+1,2:"",3:"",4:"",5:"",6:"",7:"",8:null,9:null,10:null,11:""};
+        for(let k=1;k<=11;k++){ const c=ws.getCell(r,k); c.value=cells[k]; c.border=allbox;
+          c.alignment={vertical:"middle",horizontal:(k===11?"left":"center"),wrapText:(k===11)};
+          c.font={name:FONT,size:(k===11?9:10),color:{argb:([8,9,10].includes(k)?"FF0000FF":"FF000000")}};
+          if([8,9,10].includes(k)) c.numFmt="0.0"; }
+        if(active && cc.daClass==="warn-red"){ const c=ws.getCell(r,7); c.fill=fill("FFC7CE"); c.font={name:FONT,size:10,bold:true,color:{argb:"FF9C0006"}}; }
+        else if(active && cc.daClass==="warn-yellow"){ ws.getCell(r,7).fill=fill("FFEB9C"); }
+        if(active && cc.baClass==="warn-yellow"){ ws.getCell(r,6).fill=fill("FFEB9C"); }
+        r++;
+      }
+      const END=r-1, TOT=r; ws.getRow(TOT).height=20;
+      for(let k=1;k<=11;k++){ const c=ws.getCell(TOT,k); c.border=allbox; c.fill=fill("EFEFEF"); c.font={name:FONT,size:10,bold:true}; c.alignment={vertical:"middle",horizontal:"center"};
+        if(k!==1&&k!==8){ c.border={...allbox,diagonal:{up:false,down:true,style:"thin"}}; } }
+      ws.getCell(TOT,1).value="合計";
+      const tv=ws.getCell(TOT,8); tv.value={formula:`SUM(H${START}:H${END})`}; tv.numFmt="0.0"; tv.fill=fill("FFF2CC");
+      const S=TOT+2; const plan=num(H("h_plan"));
+      let _bas=[],_das=[];
+      rows.forEach(row=>{ if(isActive(row)){ const cc=calcRow(row); if(cc.ba!=null) _bas.push(cc.ba); if(cc.da!=null) _das.push(cc.da); } });
+      const _avg=a=>a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null;
+      const avgBA=_bas.length?fmtDur(_avg(_bas)):"", avgDA=_das.length?fmtDur(_avg(_das)):"", maxDA=_das.length?fmtDur(Math.max(..._das)):"";
+      ws.mergeCells(`B${S-1}:F${S-1}`); const sh=ws.getCell(`B${S-1}`); sh.value="■ 集計・数量管理"; sh.font={name:FONT,size:11,bold:true};
+      const sumRows=[["計画打設量 (㎥)",plan,"0.0",true],["打設量 累計 (㎥)",{formula:`H${TOT}`},"0.0",false],["残量 (㎥)",{formula:`E${S}-E${S+1}`},"0.0",false],
+        ["投入台数 (台)",{formula:`COUNT(H${START}:H${END})`},"0",false],["平均運搬時間",avgBA,"@",false],["平均 D－A 時間",avgDA,"@",false],["最大 D－A 時間",maxDA,"@",false],
+        ["平均ｺﾝｸﾘｰﾄ温度 (℃)",{formula:`IFERROR(AVERAGE(I${START}:I${END}),"")`},"0.0",false],["平均気温 (℃)",{formula:`IFERROR(AVERAGE(J${START}:J${END}),"")`},"0.0",false]];
+      sumRows.forEach((sr,i)=>{ const rr=S+i; ws.mergeCells(`B${rr}:D${rr}`); ws.mergeCells(`E${rr}:F${rr}`);
+        const lc=ws.getCell(`B${rr}`); lc.value=sr[0]; lc.font={name:FONT,size:10,bold:true}; lc.fill=fill("EFEFEF"); lc.alignment={vertical:"middle",horizontal:"left"};
+        const vc=ws.getCell(`E${rr}`); vc.value=sr[1]; vc.numFmt=sr[2]; vc.font={name:FONT,size:10,color:{argb:sr[3]?"FF0000FF":"FF000000"}}; vc.alignment={vertical:"middle",horizontal:"center"};
+        setRange(`B${rr}:F${rr}`,c=>{c.border=allbox;}); });
+      ws.mergeCells(`H${S-1}:K${S-1}`); const nh=ws.getCell(`H${S-1}`); nh.value="■ 判定基準・注記"; nh.font={name:FONT,size:11,bold:true};
+      const notes=["D－A（練りはじめ～打設完了）の時間制限：","　・気温25℃以下 … 120分以内","　・気温25℃を超える … 90分以内　(土木学会示方書)","　赤=制限超過 / 黄=制限15分前（注意）","運搬時間(B－A)が90分超で黄表示（参考）","A・B欄：納入伝票と一致すること","C・D欄：実際の打設時間を記載すること","温度欄：納入伝票と一致すること","青字セル＝入力欄（打設量・温度・計画数量）"];
+      notes.forEach((t,i)=>{ const rr=S+i; ws.mergeCells(`H${rr}:K${rr}`); const c=ws.getCell(`H${rr}`); c.value=t; c.font={name:FONT,size:9}; c.alignment={vertical:"middle",horizontal:"left",wrapText:true}; });
+      ws.pageSetup={orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.3,right:0.3,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
+    }
+
+    if(mode!=='dasetsu'){
+      const q=wb.addWorksheet("品質管理",{views:[{showGridLines:false}]});
+      [22,16,16,16,12].forEach((w,i)=>q.getColumn(i+1).width=w);
+      const qbox=(r1,c1,r2,c2)=>{ for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){ q.getCell(r,c).border=allbox; } };
+      q.mergeCells("A1:E1"); const qt=q.getCell("A1"); qt.value="品質管理試験記録"; qt.font={name:FONT,size:15,bold:true}; qt.alignment={horizontal:"center",vertical:"middle"}; q.getRow(1).height=24;
+      const info=[["工事名",H("h_name")],["生コン種類（呼び強度）",H("q_kind")||H("h_kind")],["打設日",dateLabel(H("h_date"))],["供試体採取日",dateLabel(H("q_sample")||H("h_date"))]];
+      let rr=3;
+      info.forEach(([k,v])=>{ const a=q.getCell(rr,1); a.value=k; a.font={name:FONT,size:10,bold:true}; a.fill=fill("EFEFEF"); a.alignment={horizontal:"left",vertical:"middle"};
+        q.mergeCells(rr,2,rr,5); const b=q.getCell(rr,2); b.value=v; b.font={name:FONT,size:10}; b.alignment={horizontal:"left",vertical:"middle"}; qbox(rr,1,rr,5); rr++; });
+      rr++;
+      const base=(H("q_sample")||H("h_date")); const fc=num(H("q_fc"));
+      const ch=q.getCell(rr,1); ch.value="圧縮強度試験（呼び強度 "+(H("q_fc")||"")+" N/mm² ／ 3日・1週は推定（参考）、合否は4週で判定 ／ 予定日は土日祝順延）"; ch.font={name:FONT,size:11,bold:true}; rr++;
+      ["材齢","試験予定日","実測 (N/mm²)","判定"].forEach((t,i)=>{ const c=q.getCell(rr,i+1); c.value=t; c.font={name:FONT,size:10,bold:true}; c.fill=fill("DDEBF7"); c.alignment={horizontal:"center",vertical:"middle"}; }); qbox(rr,1,rr,4); rr++;
+      const jstr=a=>(fc!=null&&a!=null)?(a>=fc?"合格":"不合格"):"";
+      [["3 日",predLabel(base,3),num(H("q_s3")),false],["1 週（7日）",predLabel(base,7),num(H("q_s7")),false],["4 週（28日）",predLabel(base,28),num(H("q_s28")),true]].forEach(([age,d,a,judge])=>{
+        q.getCell(rr,1).value=age; q.getCell(rr,2).value=d||""; q.getCell(rr,3).value=a; if(a!=null) q.getCell(rr,3).numFmt="0.0"; q.getCell(rr,4).value= judge ? jstr(a) : (a!=null?"参考":"");
+        for(let c=1;c<=4;c++){ q.getCell(rr,c).font={name:FONT,size:10}; q.getCell(rr,c).alignment={horizontal:"center",vertical:"middle"}; } qbox(rr,1,rr,4); rr++; });
+      rr++;
+      const fh=q.getCell(rr,1); fh.value="フレッシュ試験"; fh.font={name:FONT,size:11,bold:true}; rr++;
+      ["試験","規格値","許容差","実測値","判定"].forEach((t,i)=>{ const c=q.getCell(rr,i+1); c.value=t; c.font={name:FONT,size:10,bold:true}; c.fill=fill("DDEBF7"); c.alignment={horizontal:"center",vertical:"middle"}; }); qbox(rr,1,rr,5); rr++;
+      const ss=num(H("q_slump_spec")),st=num(H("q_slump_tol")),sa=num(H("q_slump_act"));
+      const as=num(H("q_air_spec")),atl=num(H("q_air_tol")),aa=num(H("q_air_act"));
+      const wl=num(H("q_water_lim")),wa=num(H("q_water_act"));
+      const frows=[["スランプ (cm)",ss,st!=null?"±"+st:"",sa,(ss!=null&&st!=null&&sa!=null)?(Math.abs(sa-ss)<=st?"合格":"不合格"):""],
+        ["空気量 (%)",as,atl!=null?"±"+atl:"",aa,(as!=null&&atl!=null&&aa!=null)?(Math.abs(aa-as)<=atl?"合格":"不合格"):""],
+        ["単位水量 (kg/m³)",wl!=null?wl+" 以下":"","",wa,(wl!=null&&wa!=null)?(wa<=wl?"合格":"不合格"):""]];
+      frows.forEach(rowv=>{ rowv.forEach((v,i)=>{ const c=q.getCell(rr,i+1); c.value=v; c.font={name:FONT,size:10}; c.alignment={horizontal:"center",vertical:"middle"}; }); qbox(rr,1,rr,5); rr++; });
+      q.pageSetup={orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:0,margins:{left:0.5,right:0.5,top:0.6,bottom:0.6,header:0.2,footer:0.2}};
+    }
+
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const dt=H("h_date")||new Date().toISOString().slice(0,10);
+    const fname = mode==='quality' ? `品質管理試験_${dt}.xlsx` : `生コン打設チェックシート_${dt}.xlsx`;
+    download(blob,fname);
+    showMsg("Excelを出力しました。",true,mid);
+  }catch(e){ showMsg("Excel出力でエラー: "+e.message,false,mid); }
+}
+
+/* ---------- PDF（印刷→PDF保存） ---------- */
+function printDoc(title, inner){
+  const w=window.open("","_blank");
+  if(!w){ showMsg("ポップアップがブロックされました。ブラウザ設定をご確認ください。",false); return; }
+  w.document.write('<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>'+title+'</title><style>'+
+    'body{font-family:"Yu Gothic","ＭＳ Ｐゴシック",sans-serif;margin:10px;color:#000;}'+
+    'h2{text-align:center;margin:4px 0 10px;font-size:18px;}'+
+    'table{border-collapse:collapse;width:100%;margin-bottom:10px;}'+
+    'th,td{border:1px solid #000;padding:3px 4px;text-align:center;font-size:11px;}'+
+    '.info td{text-align:left;font-size:12px;} .lbl{background:#eee;font-weight:bold;white-space:nowrap;}'+
+    '.red{background:#f4c7ce;color:#9c0006;font-weight:bold;} .yel{background:#ffeb9c;}'+
+    '.sec{font-weight:bold;font-size:13px;margin:10px 0 4px;}'+
+    '@page{size:A4 portrait;margin:10mm;}'+
+    '</style></head><body>'+inner+'</body></html>');
+  w.document.close();
+  setTimeout(function(){ try{ w.focus(); w.print(); }catch(e){} }, 500);
+}
+function printDasetsu(){
+  const H=id=>g(id).value;
+  let info='<table class="info"><tr><td class="lbl">工事番号</td><td>'+esc(H("h_no"))+'</td><td class="lbl">構造物名</td><td>'+esc(H("h_struct"))+'</td></tr>'+
+    '<tr><td class="lbl">工事名</td><td>'+esc(H("h_name"))+'</td><td class="lbl">打設箇所</td><td>'+esc(H("h_place"))+'</td></tr>'+
+    '<tr><td class="lbl">生コン種類</td><td>'+esc(H("h_kind"))+'</td><td class="lbl">打設日</td><td>'+esc(dateLabel(H("h_date")))+'</td></tr></table>';
+  let head='<tr><th>車両</th><th>出発A</th><th>到着B</th><th>打設開始C</th><th>打設終了D</th><th>運搬B-A</th><th>D-A</th><th>打設量㎥</th><th>ｺﾝ温℃</th><th>気温℃</th><th>備考</th></tr>';
+  let body=""; const N=Math.max(25,rows.length); let tot=0;
+  for(let i=0;i<N;i++){ const row=rows[i]; const act=row&&isActive(row); const c=row?calcRow(row):{};
+    let a="",b="",cc="",d="",ba="",da="",vol="",ct="",at="",note="",ds="",bs="";
+    if(act){ a=row.a;b=row.b;cc=row.c;d=row.d; ba=fmtDur(c.ba); da=fmtDur(c.da);
+      const v=num(row.vol); if(v!=null){vol=v.toFixed(1); tot+=v;} const e1=effCt(row); ct=e1!=null?e1.toFixed(1):""; const e2=effAt(row); at=e2!=null?e2.toFixed(1):""; note=row.note||"";
+      if(c.daClass==="warn-red") ds=' class="red"'; else if(c.daClass==="warn-yellow") ds=' class="yel"'; if(c.baClass==="warn-yellow") bs=' class="yel"'; }
+    body+='<tr><td>'+(i+1)+'</td><td>'+esc(a)+'</td><td>'+esc(b)+'</td><td>'+esc(cc)+'</td><td>'+esc(d)+'</td><td'+bs+'>'+ba+'</td><td'+ds+'>'+da+'</td><td>'+vol+'</td><td>'+ct+'</td><td>'+at+'</td><td style="text-align:left">'+esc(note)+'</td></tr>';
+  }
+  const plan=num(H("h_plan")); const rem=plan!=null?(plan-tot).toFixed(1):"—";
+  let foot='<tr><td>合計</td><td colspan="6"></td><td>'+tot.toFixed(1)+'</td><td colspan="3"></td></tr>';
+  let sum='<div class="sec">集計</div><table><tr><td class="lbl">計画打設量</td><td>'+(plan!=null?plan.toFixed(1):"—")+' ㎥</td><td class="lbl">打設累計</td><td>'+tot.toFixed(1)+' ㎥</td><td class="lbl">残量</td><td>'+rem+' ㎥</td></tr></table>';
+  printDoc("生コン打設チェックシート","<h2>生コン打設チェックシート</h2>"+info+"<table>"+head+body+foot+"</table>"+sum);
+}
+function printQuality(){
+  const H=id=>g(id).value; const base=(H("q_sample")||H("h_date")); const fc=num(H("q_fc"));
+  const jstr=a=>(fc!=null&&a!=null)?(a>=fc?"合格":"不合格"):"";
+  let info='<table class="info"><tr><td class="lbl">工事名</td><td>'+esc(H("h_name"))+'</td><td class="lbl">生コン種類</td><td>'+esc(H("q_kind")||H("h_kind"))+'</td></tr>'+
+    '<tr><td class="lbl">打設日</td><td>'+esc(dateLabel(H("h_date")))+'</td><td class="lbl">供試体採取日</td><td>'+esc(dateLabel(H("q_sample")||H("h_date")))+'</td></tr></table>';
+  const cs=(age,n,id,judge)=>{ const a=num(H(id)); const j= judge ? jstr(a) : (a!=null?"参考":""); return '<tr><td>'+age+'</td><td>'+predLabel(base,n)+'</td><td>'+(a!=null?a.toFixed(1):"")+'</td><td>'+j+'</td></tr>'; };
+  let comp='<div class="sec">圧縮強度試験（呼び強度 '+esc(H("q_fc"))+' N/mm² ／ 3日・1週は推定（参考）、合否は4週で判定 ／ 予定日は土日祝順延）</div>'+
+    '<table><tr><th>材齢</th><th>試験予定日</th><th>実測(N/mm²)</th><th>判定</th></tr>'+cs("3 日",3,"q_s3",false)+cs("1 週（7日）",7,"q_s7",false)+cs("4 週（28日）",28,"q_s28",true)+'</table>';
+  const ss=num(H("q_slump_spec")),st=num(H("q_slump_tol")),sa=num(H("q_slump_act"));
+  const as=num(H("q_air_spec")),atl=num(H("q_air_tol")),aa=num(H("q_air_act"));
+  const wl=num(H("q_water_lim")),wa=num(H("q_water_act"));
+  const jj=(ok)=>ok==null?"":(ok?"合格":"不合格");
+  let fresh='<div class="sec">フレッシュ試験</div><table><tr><th>試験</th><th>規格値</th><th>許容差</th><th>実測値</th><th>判定</th></tr>'+
+    '<tr><td>スランプ(cm)</td><td>'+(ss!=null?ss:"")+'</td><td>'+(st!=null?"±"+st:"")+'</td><td>'+(sa!=null?sa:"")+'</td><td>'+jj((ss!=null&&st!=null&&sa!=null)?Math.abs(sa-ss)<=st:null)+'</td></tr>'+
+    '<tr><td>空気量(%)</td><td>'+(as!=null?as:"")+'</td><td>'+(atl!=null?"±"+atl:"")+'</td><td>'+(aa!=null?aa:"")+'</td><td>'+jj((as!=null&&atl!=null&&aa!=null)?Math.abs(aa-as)<=atl:null)+'</td></tr>'+
+    '<tr><td>単位水量(kg/m³)</td><td colspan="2">'+(wl!=null?wl+" 以下":"")+'</td><td>'+(wa!=null?wa:"")+'</td><td>'+jj((wl!=null&&wa!=null)?wa<=wl:null)+'</td></tr></table>';
+  printDoc("品質管理試験記録","<h2>品質管理試験記録</h2>"+info+comp+fresh);
+}
+
+function exportCSV(){
+  const H=id=>g(id).value; let out=[];
+  out.push(["工事番号",H("h_no")]); out.push(["工事名",H("h_name")]); out.push(["構造物名",H("h_struct")]); out.push(["打設箇所",H("h_place")]);
+  out.push(["生コン種類",H("h_kind")]); out.push(["打設日",dateLabel(H("h_date"))]); out.push(["計画打設量(㎥)",H("h_plan")]); out.push([]);
+  out.push(["No.","出発(A)","到着(B)","打設開始(C)","打設終了(D)","運搬(B-A)","D-A","打設量(㎥)","ｺﾝｸﾘｰﾄ温度(℃)","気温(℃)","判定","備考"]);
+  let vol=0;
+  rows.forEach((row,i)=>{ if(!isActive(row)) return; const c=calcRow(row); const v=num(row.vol); if(v!=null) vol+=v;
+    let judge=""; if(c.da!=null){ judge = c.da>c.limit?"超過":(c.da>c.limit-15?"注意":"OK"); }
+    const ct=effCt(row), at=effAt(row);
+    out.push([i+1,row.a,row.b,row.c,row.d,fmtDur(c.ba),fmtDur(c.da),v!=null?v.toFixed(1):"",ct!=null?ct.toFixed(1):"",at!=null?at.toFixed(1):"",judge,row.note||""]); });
+  out.push(["合計","","","","","","",vol.toFixed(1)]);
+  const csv=out.map(r=>r.map(x=>`"${String(x==null?"":x).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const blob=new Blob(["﻿"+csv],{type:"text/csv;charset=utf-8"});
+  const dt=H("h_date")||new Date().toISOString().slice(0,10);
+  download(blob,`生コン打設記録_${dt}.csv`); showMsg("CSVを出力しました。",true);
+}
+function download(blob,name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); }
+
+function onDate(){ g("h_date_disp").value=dateLabel(g("h_date").value); qRender(); save(); }
+
+window.addEventListener("DOMContentLoaded",()=>{
+  load(); loadFiles(); if(rows.length===0) rows=[blankRow()];
+  ["h_no","h_name","h_struct","h_place","h_plan"].forEach(id=>{ const el=g(id); if(el) el.addEventListener("input",()=>{save();summarize();}); });
+  g("h_kind").addEventListener("input",()=>{ g("q_kind").value=g("h_kind").value; onKind(); });
+  ["h_basetemp","h_basectemp"].forEach(id=>{ const el=g(id); if(el) el.addEventListener("input",()=>{renderPanel();renderList();summarize();save();}); });
+  g("h_date").addEventListener("input",onDate); g("h_date").addEventListener("change",onDate);
+  g("q_sample").addEventListener("input",onSample); g("q_sample").addEventListener("change",onSample);
+  ["q_fc","q_slump_spec","q_slump_tol","q_air_spec","q_air_tol","q_water_lim"].forEach(id=>{ const el=g(id); if(el) el.addEventListener("input",qRender); });
+  onDate(); g("q_sample_disp").value=dateLabel(g("q_sample").value); refreshAll(); qRender(); renderFiles();
+});
+</script>
+</body>
+</html>
