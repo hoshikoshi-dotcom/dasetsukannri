@@ -1,0 +1,17 @@
+{
+  "name": "生コン打設管理",
+  "short_name": "生コン打設",
+  "description": "生コン打設の記録・品質管理試験・現場ファイル集計を行う電子野帳",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef1f4",
+  "theme_color": "#1C5A99",
+  "lang": "ja",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

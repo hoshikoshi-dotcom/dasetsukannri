@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="生コン打設">
 <meta name="theme-color" content="#1C5A99">
+<link rel="manifest" href="manifest.webmanifest">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <style>
   :root{ --line:#cfd6dd; --accent:#1c5a99; --red:#f4c7ce; --redtx:#9c0006;
@@ -813,5 +814,6 @@ window.addEventListener("DOMContentLoaded",()=>{
   onDate(); g("q_sample_disp").value=dateLabel(g("q_sample").value); refreshAll(); qRender(); renderFiles();
 });
 </script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
 </body>
 </html>
